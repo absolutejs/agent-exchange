@@ -30,6 +30,7 @@ const safeRequestInput = (input: AgentExchangeRequestInput, nonce: string) => ({
   assurance: input.assurance,
   expiresAt: input.expiresAt,
   maximumUses: 1 as const,
+  ...(input.mandateId === undefined ? {} : { mandateId: input.mandateId }),
   nonce,
   processingMode: input.processingMode ?? "tool-confined",
   purpose: input.purpose,

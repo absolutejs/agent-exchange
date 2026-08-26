@@ -101,7 +101,10 @@ export const validateAgentExchangeInput = (
     input.expiresAt <= options.now ||
     input.expiresAt > options.now + options.maxTtlMs ||
     !options.allowedProcessingModes.includes(processingMode) ||
-    (input.idempotencyKey !== undefined && !nonEmpty(input.idempotencyKey))
+    (input.idempotencyKey !== undefined && !nonEmpty(input.idempotencyKey)) ||
+    (input.assurance.approval === "standing-mandate"
+      ? input.mandateId === undefined || !nonEmpty(input.mandateId)
+      : input.mandateId !== undefined)
   ) {
     throw new AgentExchangeError("invalid_request");
   }

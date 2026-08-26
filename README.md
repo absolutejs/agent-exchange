@@ -80,7 +80,9 @@ whose canonical payload binds the owner, requesting agent, executing agent, exac
 account, provider, origin, operation, purpose, risk class, secret kind, activation
 window, expiry, and total use limit. Issuance requires fresh, user-verified WebAuthn
 evidence. Authorization additionally requires the request's `delegationId` to be
-the signed mandate ID and atomically consumes the exchange ID in a revocation
+present as its independently authenticated agent delegation, requires the
+request's separate `mandateId` to equal the signed mandate ID, and atomically
+consumes the exchange ID in a revocation
 store. The JWS is not placed in A2A task history.
 
 The core accepts interchangeable JWS signer, verifier, and durable store

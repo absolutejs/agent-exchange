@@ -334,7 +334,7 @@ export const createAgentExchangeStandingMandateAuthority = (options: {
         now >= mandate.expiresAt ||
         request.createdAt < mandate.notBefore ||
         request.expiresAt > mandate.expiresAt ||
-        request.requester.delegationId !== mandate.mandateId ||
+        request.mandateId !== mandate.mandateId ||
         request.assurance.approval !== "standing-mandate" ||
         request.assurance.credential !== "token-confined-broker" ||
         !sameActor(mandate.requester, request.requester) ||

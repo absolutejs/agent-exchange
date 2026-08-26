@@ -13,6 +13,7 @@ export type A2aAgentExchangeReference = {
   readonly assurance: AgentExchangeAssurance;
   readonly exchangeId: string;
   readonly expiresAt: number;
+  readonly mandateId?: string;
   readonly operation: string;
   readonly origin: string;
   readonly processingMode: "tool-confined";
@@ -49,6 +50,9 @@ export const toA2aAgentExchangeReference = (
     assurance: request.assurance,
     exchangeId: request.exchangeId,
     expiresAt: request.expiresAt,
+    ...(request.mandateId === undefined
+      ? {}
+      : { mandateId: request.mandateId }),
     operation: request.resource.operation,
     origin: request.resource.origin,
     processingMode: "tool-confined",
@@ -94,6 +98,7 @@ export const parseA2aAgentExchangeReference = (
     "assurance",
     "exchangeId",
     "expiresAt",
+    "mandateId",
     "operation",
     "origin",
     "processingMode",
@@ -108,6 +113,7 @@ export const parseA2aAgentExchangeReference = (
     !isAgentExchangeAssurance(data.assurance) ||
     typeof data.exchangeId !== "string" ||
     typeof data.expiresAt !== "number" ||
+    (data.mandateId !== undefined && typeof data.mandateId !== "string") ||
     typeof data.operation !== "string" ||
     typeof data.origin !== "string" ||
     data.processingMode !== "tool-confined" ||

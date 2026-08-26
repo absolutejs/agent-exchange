@@ -188,6 +188,7 @@ export type AgentExchangeRequestInput = {
   readonly assurance: AgentExchangeAssurance;
   readonly expiresAt: number;
   readonly idempotencyKey?: string;
+  readonly mandateId?: string;
   readonly processingMode?: SecretProcessingMode;
   readonly purpose: string;
   readonly recipient: ExchangeIdentity;

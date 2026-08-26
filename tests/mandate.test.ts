@@ -92,11 +92,12 @@ const request = (
   exchangeId: "exchange-1",
   expiresAt: now + 30_000,
   maximumUses: 1,
+  mandateId: "mandate-1",
   nonce: "nonce-1",
   processingMode: "tool-confined",
   purpose: "complete sign-in",
   recipient: audience,
-  requester: { ...requester, delegationId: "mandate-1" },
+  requester: { ...requester, delegationId: "oauth-delegation-1" },
   resource: {
     accountRef: "mailbox-1",
     operation: "retrieve-code",
