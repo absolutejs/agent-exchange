@@ -39,7 +39,137 @@ export type AgentExchangeAssurance =
       readonly credential:
         "origin-bound" | "sender-constrained" | "token-confined-broker";
       readonly execution: "purpose-bound";
+    }
+  | {
+      readonly approval: "standing-mandate";
+      readonly credential: "token-confined-broker";
+      readonly execution: "purpose-bound";
     };
+
+export type AgentExchangeMandatePrincipal = {
+  readonly authority: string;
+  readonly subject: string;
+};
+
+export type AgentExchangeMandateActor = AgentExchangeMandatePrincipal & {
+  readonly agentId: string;
+  readonly deviceId?: string;
+};
+
+export type AgentExchangeMandateGrant = {
+  readonly accountRef: string;
+  readonly operation: string;
+  readonly origin: string;
+  readonly provider: string;
+  readonly purpose: string;
+  readonly risk: ExchangeRiskClass;
+  readonly secretKind: string;
+};
+
+export type AgentExchangeStandingMandate = {
+  readonly approval: {
+    readonly credentialIdHash: string;
+    readonly method: "webauthn-verifier-bound";
+    readonly rpId: string;
+    readonly userVerified: true;
+    readonly verifiedAt: number;
+    readonly verifierOrigin: string;
+  };
+  readonly audience: AgentExchangeMandateActor;
+  readonly expiresAt: number;
+  readonly grants: readonly AgentExchangeMandateGrant[];
+  readonly issuedAt: number;
+  readonly issuer: AgentExchangeMandatePrincipal;
+  readonly mandateId: string;
+  readonly maximumUses: number;
+  readonly notBefore: number;
+  readonly requester: AgentExchangeMandateActor;
+  readonly version: 1;
+};
+
+export type AgentExchangeStandingMandateInput = Omit<
+  AgentExchangeStandingMandate,
+  "issuedAt" | "version"
+>;
+
+export type SignedAgentExchangeStandingMandate = {
+  readonly compactJws: string;
+};
+
+export type AgentExchangeMandateJwsSigner = {
+  readonly sign: (input: {
+    readonly payload: Uint8Array;
+    readonly type: "absolute-agent-exchange-mandate+jws";
+  }) => Promise<string> | string;
+};
+
+export type AgentExchangeMandateJwsVerifier = {
+  readonly verify: (input: {
+    readonly compactJws: string;
+    readonly expectedIssuer: AgentExchangeMandatePrincipal;
+    readonly type: "absolute-agent-exchange-mandate+jws";
+  }) =>
+    | Promise<{
+        readonly algorithm: string;
+        readonly keyId: string;
+        readonly payload: Uint8Array;
+      }>
+    | {
+        readonly algorithm: string;
+        readonly keyId: string;
+        readonly payload: Uint8Array;
+      };
+};
+
+export type AgentExchangeMandateRegistration = {
+  readonly expiresAt: number;
+  readonly issuer: AgentExchangeMandatePrincipal;
+  readonly mandateId: string;
+  readonly maximumUses: number;
+};
+
+export type AgentExchangeMandateConsumeResult =
+  "consumed" | "exhausted" | "replay" | "revoked" | "unknown";
+
+export type AgentExchangeMandateStore = {
+  readonly consume: (input: {
+    readonly exchangeId: string;
+    readonly mandateId: string;
+    readonly now: number;
+  }) => Promise<AgentExchangeMandateConsumeResult>;
+  readonly register: (
+    registration: AgentExchangeMandateRegistration,
+  ) => Promise<boolean>;
+  readonly revoke: (input: {
+    readonly issuer: AgentExchangeMandatePrincipal;
+    readonly mandateId: string;
+    readonly now: number;
+  }) => Promise<boolean>;
+};
+
+export type AgentExchangeMandateAuthorization = {
+  readonly algorithm: string;
+  readonly keyId: string;
+  readonly mandateId: string;
+  readonly remainingUses?: number;
+  readonly status: "authorized";
+};
+
+export type AgentExchangeStandingMandateAuthority = {
+  readonly authorize: (input: {
+    readonly expectedIssuer: AgentExchangeMandatePrincipal;
+    readonly request: AgentExchangeRequest;
+    readonly signedMandate: SignedAgentExchangeStandingMandate;
+  }) => Promise<AgentExchangeMandateAuthorization>;
+  readonly issue: (input: AgentExchangeStandingMandateInput) => Promise<{
+    readonly mandate: AgentExchangeStandingMandate;
+    readonly signedMandate: SignedAgentExchangeStandingMandate;
+  }>;
+  readonly revoke: (input: {
+    readonly issuer: AgentExchangeMandatePrincipal;
+    readonly mandateId: string;
+  }) => Promise<boolean>;
+};
 
 export type ExchangeResource = {
   readonly accountRef: string;

@@ -9,6 +9,19 @@ export {
   type AgentExchangeErrorCode,
 } from "./errors";
 export { assertNoSensitiveValue, containsSensitiveValue } from "./leakage";
+export {
+  AGENT_EXCHANGE_MANDATE_JWS_TYPE,
+  createAgentExchangeStandingMandateAuthority,
+  DEFAULT_MANDATE_APPROVAL_MAX_AGE_MS,
+  DEFAULT_MANDATE_MAX_GRANTS,
+  DEFAULT_MANDATE_MAX_PAYLOAD_BYTES,
+  DEFAULT_MANDATE_MAX_TTL_MS,
+  DEFAULT_MANDATE_MAX_USES,
+} from "./mandate";
+export {
+  createMemoryAgentExchangeMandateStore,
+  type MemoryAgentExchangeMandateStore,
+} from "./mandate-store";
 export { createAgentExchangeReceiver } from "./receiver";
 export {
   createMemoryAgentExchangeReplayStore,

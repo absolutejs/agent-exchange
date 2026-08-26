@@ -60,6 +60,12 @@ export const isAgentExchangeAssurance = (
       value.execution === "purpose-bound"
     );
   }
+  if (value.approval === "standing-mandate") {
+    return (
+      value.credential === "token-confined-broker" &&
+      value.execution === "purpose-bound"
+    );
+  }
   return (
     value.approval === "policy" &&
     (value.credential === "bearer" ||

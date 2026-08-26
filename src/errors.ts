@@ -4,6 +4,9 @@ export type AgentExchangeErrorCode =
   | "high_risk_denied"
   | "invalid_request"
   | "key_resolution_failed"
+  | "mandate_exhausted"
+  | "mandate_invalid"
+  | "mandate_revoked"
   | "open_failed"
   | "protection_failed"
   | "replay_check_failed"
@@ -19,6 +22,10 @@ const messages: Readonly<Record<AgentExchangeErrorCode, string>> = {
   high_risk_denied: "This high-risk exchange is denied by default.",
   invalid_request: "Agent exchange request is invalid.",
   key_resolution_failed: "Recipient key resolution failed.",
+  mandate_exhausted: "Standing mandate has no remaining authorized uses.",
+  mandate_invalid:
+    "Standing mandate is invalid or does not authorize this exchange.",
+  mandate_revoked: "Standing mandate has been revoked.",
   open_failed: "Protected exchange could not be opened.",
   protection_failed: "Sensitive value protection failed.",
   replay_check_failed: "Agent exchange replay validation failed.",

@@ -63,6 +63,39 @@ tool operation, but the upstream resource itself does not cryptographically bind
 the access token to the broker. It must never be described as equivalent to a
 sender-constrained DPoP or mTLS token.
 
+### Standing mandates
+
+Long-running agent-to-agent automation uses a separate assurance value:
+
+```ts
+assurance: {
+  approval: "standing-mandate",
+  credential: "token-confined-broker",
+  execution: "purpose-bound",
+}
+```
+
+`createAgentExchangeStandingMandateAuthority()` issues and verifies a compact JWS
+whose canonical payload binds the owner, requesting agent, executing agent, exact
+account, provider, origin, operation, purpose, risk class, secret kind, activation
+window, expiry, and total use limit. Issuance requires fresh, user-verified WebAuthn
+evidence. Authorization additionally requires the request's `delegationId` to be
+the signed mandate ID and atomically consumes the exchange ID in a revocation
+store. The JWS is not placed in A2A task history.
+
+The core accepts interchangeable JWS signer, verifier, and durable store
+implementations. Production verifiers must authenticate the trusted issuer and
+key ID, enforce the explicit JWS type and allowed algorithm, and reject unknown or
+revoked registrations. The memory store is for tests and local development only.
+
+This design uses the signed-payload format from
+[RFC 7515](https://www.rfc-editor.org/rfc/rfc7515), canonical JSON rules from
+[RFC 8785](https://www.rfc-editor.org/rfc/rfc8785), the narrow actions and
+locations model from [RFC 9396](https://www.rfc-editor.org/rfc/rfc9396), and the
+separate subject/actor semantics described by
+[RFC 8693](https://www.rfc-editor.org/rfc/rfc8693). It does not make the wire
+contract depend on an unfinished transaction-token or chain-delegation draft.
+
 ## Security invariants
 
 - Every request binds requester, recipient, purpose, service origin, account
@@ -79,6 +112,8 @@ sender-constrained DPoP or mTLS token.
   and base64url representations of the protected value.
 - High-risk recovery, administrative, security-setting, money movement, and export
   flows are denied unless the host explicitly opts them in.
+- Standing mandates are exact-match allowlists, never wildcard scopes. Revocation,
+  replay prevention, expiry, and total use limits are enforced by one atomic store.
 
 ## A2A boundary
 

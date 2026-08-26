@@ -15,6 +15,20 @@ subject, an RP ID valid for that origin, user verification, and the exchange
 lifetime. Deployments must still use an audited WebAuthn implementation and secure
 credential store.
 
+The `standing-mandate` mode is not an unattended substitute for WebAuthn. A fresh,
+user-verified WebAuthn ceremony authorizes the bounded mandate once; every later
+execution must verify its JWS with a trusted issuer key and atomically check and
+consume durable revocation state. Keep signing keys in a managed KMS/HSM, rotate
+them with overlapping verification windows, authenticate agent-to-agent requests
+at the transport boundary, and never place the compact JWS or broker credentials
+in model-visible context. The included memory mandate store is not suitable for
+multiple processes or production.
+
+Standing mandates intentionally support only exact grants. Do not add wildcard
+origins, redirectable destinations, free-form operations, unbounded lifetimes, or
+unlimited uses. A signed mandate proves owner authorization; it does not by itself
+authenticate the requesting agent's network connection.
+
 Do not describe an exchange as phishing-resistant when its credential assurance is
 `bearer`. NIST explicitly excludes manually entered OTP and out-of-band outputs
 because they can be relayed to a legitimate verifier.
