@@ -148,3 +148,10 @@ package wipes them after delivery.
 ## License
 
 Apache-2.0
+
+## Release compatibility
+
+The `0.5.x` line uses the version-bound `@absolutejs/e2ee@0.5.x`
+certification contract and the separately certified provider runtimes. Provider
+admission remains the host's responsibility; a compatible type does not replace
+release-specific security evidence.
