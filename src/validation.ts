@@ -55,7 +55,8 @@ export const isAgentExchangeAssurance = (
   if (value.approval === "webauthn-verifier-bound") {
     return (
       (value.credential === "origin-bound" ||
-        value.credential === "sender-constrained") &&
+        value.credential === "sender-constrained" ||
+        value.credential === "token-confined-broker") &&
       value.execution === "purpose-bound"
     );
   }

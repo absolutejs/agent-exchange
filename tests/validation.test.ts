@@ -88,6 +88,28 @@ describe("request validation", () => {
     }
   });
 
+  test("represents a passkey-approved token-confined broker explicitly", () => {
+    const now = Date.now();
+    expect(() =>
+      validateAgentExchangeInput(
+        requestInput({
+          assurance: {
+            approval: "webauthn-verifier-bound",
+            credential: "token-confined-broker",
+            execution: "purpose-bound",
+          },
+          expiresAt: now + 60_000,
+        }),
+        {
+          allowInsecureLocalhost: false,
+          allowedProcessingModes: ["tool-confined"],
+          maxTtlMs: 300_000,
+          now,
+        },
+      ),
+    ).not.toThrow();
+  });
+
   test("requires HTTPS requester and recipient authorities", () => {
     const now = Date.now();
     expect(() =>

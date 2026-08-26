@@ -46,6 +46,23 @@ This follows WebAuthn's requirements to validate the challenge, origin, RP ID ha
 user-presence flag, and—when requested—the user-verification flag. The provider
 must request user verification and perform the cryptographic assertion validation.
 
+When an upstream provider issues bearer access tokens but Absolute PaaS confines
+them to a deterministic broker, the request uses a separate, deliberately weaker
+shape:
+
+```ts
+assurance: {
+  approval: "webauthn-verifier-bound",
+  credential: "token-confined-broker",
+  execution: "purpose-bound",
+}
+```
+
+This means the token is inaccessible to both agents and restricted to one approved
+tool operation, but the upstream resource itself does not cryptographically bind
+the access token to the broker. It must never be described as equivalent to a
+sender-constrained DPoP or mTLS token.
+
 ## Security invariants
 
 - Every request binds requester, recipient, purpose, service origin, account

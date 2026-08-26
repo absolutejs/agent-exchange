@@ -36,7 +36,8 @@ export type AgentExchangeAssurance =
     }
   | {
       readonly approval: "webauthn-verifier-bound";
-      readonly credential: "origin-bound" | "sender-constrained";
+      readonly credential:
+        "origin-bound" | "sender-constrained" | "token-confined-broker";
       readonly execution: "purpose-bound";
     };
 
