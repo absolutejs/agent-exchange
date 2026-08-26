@@ -79,9 +79,17 @@ const validActor = (
   allowInsecureLocalhost: boolean,
 ): value is AgentExchangeMandateActor =>
   isRecord(value) &&
-  hasOnlyKeys(value, ["agentId", "authority", "deviceId", "subject"]) &&
+  hasOnlyKeys(value, [
+    "agentId",
+    "authority",
+    "delegationId",
+    "deviceId",
+    "subject",
+  ]) &&
   typeof value.agentId === "string" &&
   nonEmpty(value.agentId) &&
+  (value.delegationId === undefined ||
+    (typeof value.delegationId === "string" && nonEmpty(value.delegationId))) &&
   typeof value.authority === "string" &&
   validOrigin(value.authority, allowInsecureLocalhost) &&
   (value.deviceId === undefined ||
@@ -241,6 +249,7 @@ const sameActor = (
   actor.agentId === identity.agentId &&
   actor.authority === identity.authority &&
   actor.subject === identity.subject &&
+  actor.delegationId === identity.delegationId &&
   actor.deviceId === identity.deviceId;
 
 const grantAllows = (

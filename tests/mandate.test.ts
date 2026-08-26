@@ -39,6 +39,7 @@ const issuer = { authority: "https://owner.example", subject: "owner-1" };
 const requester = {
   agentId: "requester-agent",
   authority: "https://requester.example",
+  delegationId: "oauth-delegation-1",
   subject: "requester-owner",
 };
 const audience = {
@@ -97,7 +98,7 @@ const request = (
   processingMode: "tool-confined",
   purpose: "complete sign-in",
   recipient: audience,
-  requester: { ...requester, delegationId: "oauth-delegation-1" },
+  requester,
   resource: {
     accountRef: "mailbox-1",
     operation: "retrieve-code",

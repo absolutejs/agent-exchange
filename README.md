@@ -77,7 +77,7 @@ assurance: {
 
 `createAgentExchangeStandingMandateAuthority()` issues and verifies a compact JWS
 whose canonical payload binds the owner, requesting agent, executing agent, exact
-account, provider, origin, operation, purpose, risk class, secret kind, activation
+OAuth agent delegation, account, provider, origin, operation, purpose, risk class, secret kind, activation
 window, expiry, and total use limit. Issuance requires fresh, user-verified WebAuthn
 evidence. Authorization additionally requires the request's `delegationId` to be
 present as its independently authenticated agent delegation, requires the

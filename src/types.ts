@@ -53,6 +53,7 @@ export type AgentExchangeMandatePrincipal = {
 
 export type AgentExchangeMandateActor = AgentExchangeMandatePrincipal & {
   readonly agentId: string;
+  readonly delegationId?: string;
   readonly deviceId?: string;
 };
 

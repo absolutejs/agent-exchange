@@ -1,6 +1,6 @@
 {
   "name": "@absolutejs/agent-exchange",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Verified, model-blind sensitive-value exchange for humans and agents using Agency, A2A, and E2EE.",
   "type": "module",
   "license": "Apache-2.0",
