@@ -1,0 +1,216 @@
+import type {
+  ActionDecision,
+  ActionReceipt,
+  Agency,
+  ExecutionLease,
+} from "@absolutejs/agency";
+import type {
+  AuthenticatedContext,
+  EnvelopeProvider,
+  SecretProcessingMode,
+} from "@absolutejs/e2ee";
+
+export type ExchangeIdentity = {
+  readonly agentId: string;
+  readonly authority: string;
+  readonly delegationId?: string;
+  readonly deviceId?: string;
+  readonly subject: string;
+};
+
+export type ExchangeRiskClass =
+  | "account-recovery"
+  | "administrative"
+  | "authentication"
+  | "data-export"
+  | "money-movement"
+  | "routine"
+  | "security-settings"
+  | (string & {});
+
+export type ExchangeResource = {
+  readonly accountRef: string;
+  readonly challengeId?: string;
+  readonly operation: string;
+  readonly origin: string;
+  readonly provider: string;
+};
+
+export type AgentExchangeRequestInput = {
+  readonly expiresAt: number;
+  readonly idempotencyKey?: string;
+  readonly processingMode?: SecretProcessingMode;
+  readonly purpose: string;
+  readonly recipient: ExchangeIdentity;
+  readonly requester: ExchangeIdentity;
+  readonly resource: ExchangeResource;
+  readonly risk: ExchangeRiskClass;
+  readonly secretKind: string;
+};
+
+export type AgentExchangeRequest = Omit<
+  AgentExchangeRequestInput,
+  "processingMode"
+> & {
+  readonly actionId: string;
+  readonly createdAt: number;
+  readonly exchangeId: string;
+  readonly maximumUses: 1;
+  readonly nonce: string;
+  readonly processingMode: SecretProcessingMode;
+};
+
+export type RequestedAgentExchange = {
+  readonly decision: ActionDecision;
+  readonly exchange: AgentExchangeRequest;
+};
+
+export type SensitiveValue = {
+  readonly bytes: Uint8Array;
+  readonly evidence?: {
+    readonly matchedAt: number;
+    readonly messageId: string;
+    readonly parserId: string;
+    readonly provider: string;
+  };
+};
+
+export type SensitiveValueSource = {
+  readonly read: (
+    request: AgentExchangeRequest,
+  ) => Promise<SensitiveValue> | SensitiveValue;
+};
+
+export type SensitiveValueSinkResult = {
+  readonly reference?: string;
+  readonly status: "submitted";
+};
+
+export type SensitiveValueSink = {
+  readonly submit: (input: {
+    readonly plaintext: Uint8Array;
+    readonly request: AgentExchangeRequest;
+  }) => Promise<SensitiveValueSinkResult> | SensitiveValueSinkResult;
+};
+
+export type RecipientKey = {
+  readonly keyId: string;
+  readonly publicKey: Uint8Array;
+};
+
+export type RecipientKeyDirectory = {
+  readonly resolve: (
+    request: AgentExchangeRequest,
+  ) => Promise<RecipientKey> | RecipientKey;
+};
+
+export type AgentExchangeDelivery = {
+  readonly authenticatedContext: AuthenticatedContext;
+  readonly envelope: Uint8Array;
+  readonly recipientKeyId: string;
+  readonly request: AgentExchangeRequest;
+};
+
+export type AgentExchangeReceipt = {
+  readonly completedAt: number;
+  readonly consentId: string;
+  readonly exchangeId: string;
+  readonly maximumUses: 1;
+  readonly modelObservedSecret: false;
+  readonly processingMode: "tool-confined";
+  readonly reference?: string;
+  readonly status: "submitted";
+};
+
+export type AgentExchangeTransport = {
+  readonly deliver: (
+    delivery: AgentExchangeDelivery,
+  ) => Promise<AgentExchangeReceipt>;
+};
+
+export type RecipientConsent = {
+  readonly consentId: string;
+  readonly expiresAt: number;
+};
+
+export type RecipientConsentVerifier = {
+  readonly assertAllows: (
+    request: AgentExchangeRequest,
+  ) => Promise<RecipientConsent> | RecipientConsent;
+};
+
+export type AgentExchangeReplayStore = {
+  readonly consume: (input: {
+    readonly exchangeId: string;
+    readonly expiresAt: number;
+    readonly nonce: string;
+    readonly now: number;
+  }) => Promise<boolean>;
+};
+
+export type AgentExchangeStore = {
+  readonly get: (
+    exchangeId: string,
+  ) => Promise<AgentExchangeRequest | undefined>;
+  readonly getByActionId: (
+    actionId: string,
+  ) => Promise<AgentExchangeRequest | undefined>;
+  readonly getReceipt: (
+    exchangeId: string,
+  ) => Promise<AgentExchangeReceipt | undefined>;
+  readonly save: (request: AgentExchangeRequest) => Promise<boolean>;
+  readonly saveReceipt: (receipt: AgentExchangeReceipt) => Promise<boolean>;
+};
+
+export type AgentExchangeSenderOptions = {
+  readonly agency: Agency;
+  readonly allowHighRisk?: (
+    input: AgentExchangeRequestInput,
+  ) => Promise<boolean> | boolean;
+  readonly allowInsecureLocalhost?: boolean;
+  readonly allowedProcessingModes?: readonly SecretProcessingMode[];
+  readonly e2ee: EnvelopeProvider;
+  readonly keyDirectory: RecipientKeyDirectory;
+  readonly maxSecretBytes?: number;
+  readonly maxTtlMs?: number;
+  readonly now?: () => number;
+  readonly source: SensitiveValueSource;
+  readonly store: AgentExchangeStore;
+  readonly transport: AgentExchangeTransport;
+};
+
+export type AgentExchangeReceiverOptions = {
+  readonly allowInsecureLocalhost?: boolean;
+  readonly consent: RecipientConsentVerifier;
+  readonly e2ee: EnvelopeProvider;
+  readonly maxSecretBytes?: number;
+  readonly maxTtlMs?: number;
+  readonly now?: () => number;
+  readonly replay: AgentExchangeReplayStore;
+  readonly sink: SensitiveValueSink;
+};
+
+export type AgentExchangeSender = {
+  readonly execute: (input: {
+    readonly exchangeId: string;
+    readonly leaseId: string;
+  }) => Promise<{
+    readonly agencyReceipt: ActionReceipt;
+    readonly receipt: AgentExchangeReceipt;
+  }>;
+  readonly issueLease: (exchangeId: string) => Promise<ExecutionLease>;
+  readonly request: (
+    input: AgentExchangeRequestInput,
+  ) => Promise<RequestedAgentExchange>;
+};
+
+export type AgentExchangeReceiver = {
+  readonly receive: (
+    delivery: AgentExchangeDelivery,
+  ) => Promise<AgentExchangeReceipt>;
+};
+
+export type AgentExchangeTelemetry = {
+  readonly attributes: Readonly<Record<string, boolean | number | string>>;
+  readonly name: "agent_exchange.completed" | "agent_exchange.failed";
+};
