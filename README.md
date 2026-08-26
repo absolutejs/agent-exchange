@@ -48,6 +48,25 @@ not persisted in ordinary A2A task history.
 
 See [SECURITY.md](./SECURITY.md) before using real protected data.
 
+## Interchangeable sources
+
+Source integrations live in the public
+[`absolutejs/agent-exchange-sources`](https://github.com/absolutejs/agent-exchange-sources)
+monorepo so this core never depends on mailbox, SMS, vault, or device-provider
+SDKs.
+
+The first adapter is `@absolutejs/agent-exchange-email`. It binds deterministic
+Gmail, Microsoft Graph, or IMAP retrieval from `@absolutejs/email` to the same
+`SensitiveValueSource` API:
+
+```bash
+bun add @absolutejs/agent-exchange @absolutejs/agent-exchange-email @absolutejs/email
+```
+
+Verification-code retrieval remains absent from model-facing manifests. The
+adapter hands mutable bytes directly to this package for encryption, and this
+package wipes them after delivery.
+
 ## License
 
 Apache-2.0
