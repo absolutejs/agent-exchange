@@ -1,4 +1,8 @@
-export { agentExchangeBinding, agentExchangeContext } from "./context";
+export {
+  agentExchangeApprovalChallenge,
+  agentExchangeBinding,
+  agentExchangeContext,
+} from "./context";
 export {
   AgentExchangeError,
   safeAgentExchangeError,
@@ -24,6 +28,7 @@ export {
   DEFAULT_BLOCKED_RISKS,
   DEFAULT_EXCHANGE_MAX_TTL_MS,
   DEFAULT_MAX_SECRET_BYTES,
+  isAgentExchangeAssurance,
   validateAgentExchangeInput,
   validateAgentExchangeRequest,
   validateSensitiveValue,

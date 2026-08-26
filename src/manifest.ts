@@ -10,6 +10,7 @@ export const manifest = defineManifest<{
     audiences: ["agent-hosts", "app-developers", "security-teams"],
     intents: [
       "authorize a sensitive agent exchange",
+      "bind an agent approval to a WebAuthn assertion",
       "deliver a value without exposing it to an agent model",
       "submit a purpose-bound email verification code",
     ],
@@ -20,14 +21,15 @@ export const manifest = defineManifest<{
       "OTP",
       "replay protection",
       "single-use lease",
+      "WebAuthn",
     ],
-    protocols: ["A2A", "HPKE", "MLS"],
+    protocols: ["A2A", "HPKE", "MLS", "WebAuthn Level 3"],
   },
   identity: {
     accent: "#7c3aed",
     category: "security",
     description:
-      "Verified, purpose-bound sensitive-value exchange for humans and agents using Agency authorization, E2EE envelopes, recipient consent, replay protection, and model-blind trusted tools.",
+      "Verified, purpose-bound sensitive-value exchange for humans and agents using explicit assurance, WebAuthn-bound Agency authorization, E2EE envelopes, recipient consent, replay protection, and model-blind trusted tools.",
     docsUrl: "https://github.com/absolutejs/agent-exchange",
     name: "@absolutejs/agent-exchange",
     tagline: "Let agents request protected actions without seeing the secret.",

@@ -28,6 +28,18 @@ export type ExchangeRiskClass =
   | "security-settings"
   | (string & {});
 
+export type AgentExchangeAssurance =
+  | {
+      readonly approval: "policy";
+      readonly credential: "bearer" | "origin-bound" | "sender-constrained";
+      readonly execution: "general" | "purpose-bound";
+    }
+  | {
+      readonly approval: "webauthn-verifier-bound";
+      readonly credential: "origin-bound" | "sender-constrained";
+      readonly execution: "purpose-bound";
+    };
+
 export type ExchangeResource = {
   readonly accountRef: string;
   readonly challengeId?: string;
@@ -37,6 +49,7 @@ export type ExchangeResource = {
 };
 
 export type AgentExchangeRequestInput = {
+  readonly assurance: AgentExchangeAssurance;
   readonly expiresAt: number;
   readonly idempotencyKey?: string;
   readonly processingMode?: SecretProcessingMode;
@@ -112,6 +125,7 @@ export type AgentExchangeDelivery = {
 };
 
 export type AgentExchangeReceipt = {
+  readonly assurance: AgentExchangeAssurance;
   readonly completedAt: number;
   readonly consentId: string;
   readonly exchangeId: string;
@@ -120,6 +134,49 @@ export type AgentExchangeReceipt = {
   readonly processingMode: "tool-confined";
   readonly reference?: string;
   readonly status: "submitted";
+};
+
+export type AgentExchangeWebAuthnApprovalEvidence = {
+  readonly challenge: string;
+  readonly credentialIdHash: string;
+  readonly requestDigest: string;
+  readonly rpId: string;
+  readonly subject: string;
+  readonly userVerified: true;
+  readonly verifiedAt: number;
+  readonly verifierOrigin: string;
+};
+
+export type AgentExchangeApprovalProvider = {
+  readonly begin: (input: {
+    readonly challenge: string;
+    readonly request: AgentExchangeRequest;
+    readonly subject: string;
+    readonly verifierOrigin: string;
+  }) =>
+    | Promise<{ readonly challenge: string; readonly options: unknown }>
+    | { readonly challenge: string; readonly options: unknown };
+  readonly verify: (input: {
+    readonly challenge: string;
+    readonly request: AgentExchangeRequest;
+    readonly response: unknown;
+    readonly subject: string;
+    readonly verifierOrigin: string;
+  }) =>
+    | Promise<{
+        readonly credentialId: string;
+        readonly rpId: string;
+        readonly subject: string;
+        readonly userVerified: true;
+        readonly verifierOrigin: string;
+      }>
+    | {
+        readonly credentialId: string;
+        readonly rpId: string;
+        readonly subject: string;
+        readonly userVerified: true;
+        readonly verifierOrigin: string;
+      };
 };
 
 export type AgentExchangeTransport = {
@@ -163,6 +220,7 @@ export type AgentExchangeStore = {
 };
 
 export type AgentExchangeSenderOptions = {
+  readonly approvalProvider?: AgentExchangeApprovalProvider;
   readonly agency: Agency;
   readonly allowHighRisk?: (
     input: AgentExchangeRequestInput,
@@ -191,6 +249,14 @@ export type AgentExchangeReceiverOptions = {
 };
 
 export type AgentExchangeSender = {
+  readonly approve: (input: {
+    readonly exchangeId: string;
+    readonly response: unknown;
+  }) => Promise<AgentExchangeWebAuthnApprovalEvidence>;
+  readonly beginApproval: (exchangeId: string) => Promise<{
+    readonly challenge: string;
+    readonly options: unknown;
+  }>;
   readonly execute: (input: {
     readonly exchangeId: string;
     readonly leaseId: string;

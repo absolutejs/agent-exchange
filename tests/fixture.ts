@@ -13,6 +13,7 @@ import {
   createAgentExchangeSender,
   createMemoryAgentExchangeReplayStore,
   createMemoryAgentExchangeStore,
+  type AgentExchangeApprovalProvider,
   type AgentExchangeDelivery,
   type AgentExchangeRequestInput,
   type RecipientConsentVerifier,
@@ -25,6 +26,11 @@ export const CODE = "482193";
 export const requestInput = (
   overrides: Partial<AgentExchangeRequestInput> = {},
 ): AgentExchangeRequestInput => ({
+  assurance: {
+    approval: "policy",
+    credential: "bearer",
+    execution: "purpose-bound",
+  },
   expiresAt: Date.now() + 60_000,
   idempotencyKey: crypto.randomUUID(),
   purpose: "email.verification.submit",
@@ -81,6 +87,7 @@ export type ExchangeFixture = Awaited<ReturnType<typeof exchangeFixture>>;
 
 export const exchangeFixture = async (
   options: {
+    approvalProvider?: AgentExchangeApprovalProvider;
     consent?: RecipientConsentVerifier;
     sink?: SensitiveValueSink;
     source?: SensitiveValueSource;
@@ -141,6 +148,7 @@ export const exchangeFixture = async (
     sink,
   });
   const sender = createAgentExchangeSender({
+    approvalProvider: options.approvalProvider,
     agency,
     e2ee,
     keyDirectory: {

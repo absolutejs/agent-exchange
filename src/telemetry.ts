@@ -10,6 +10,8 @@ export const agentExchangeReceiptToTelemetry = (
   receipt: AgentExchangeReceipt,
 ): AgentExchangeTelemetry => ({
   attributes: Object.freeze({
+    "agent.exchange.approval_assurance": request.assurance.approval,
+    "agent.exchange.credential_assurance": request.assurance.credential,
     "agent.exchange.duration_ms": Math.max(
       0,
       receipt.completedAt - request.createdAt,
@@ -17,6 +19,7 @@ export const agentExchangeReceiptToTelemetry = (
     "agent.exchange.id": request.exchangeId,
     "agent.exchange.maximum_uses": 1,
     "agent.exchange.processing_mode": request.processingMode,
+    "agent.exchange.execution_assurance": request.assurance.execution,
     "agent.exchange.purpose": request.purpose,
     "agent.exchange.risk": request.risk,
     "agent.exchange.status": receipt.status,
@@ -29,9 +32,12 @@ export const agentExchangeErrorToTelemetry = (
   code: AgentExchangeErrorCode,
 ): AgentExchangeTelemetry => ({
   attributes: Object.freeze({
+    "agent.exchange.approval_assurance": request.assurance.approval,
+    "agent.exchange.credential_assurance": request.assurance.credential,
     "agent.exchange.error_code": code,
     "agent.exchange.id": request.exchangeId,
     "agent.exchange.processing_mode": request.processingMode,
+    "agent.exchange.execution_assurance": request.assurance.execution,
     "agent.exchange.purpose": request.purpose,
     "agent.exchange.risk": request.risk,
   }),

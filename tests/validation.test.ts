@@ -56,6 +56,58 @@ describe("request validation", () => {
       ).toThrow(AgentExchangeError);
     }
   });
+
+  test("cannot label bearer or general execution as WebAuthn phishing-resistant", () => {
+    const now = Date.now();
+    for (const assurance of [
+      {
+        approval: "webauthn-verifier-bound",
+        credential: "bearer",
+        execution: "purpose-bound",
+      },
+      {
+        approval: "webauthn-verifier-bound",
+        credential: "sender-constrained",
+        execution: "general",
+      },
+    ]) {
+      expect(() =>
+        validateAgentExchangeInput(
+          requestInput({
+            assurance: assurance as never,
+            expiresAt: now + 60_000,
+          }),
+          {
+            allowInsecureLocalhost: false,
+            allowedProcessingModes: ["tool-confined"],
+            maxTtlMs: 300_000,
+            now,
+          },
+        ),
+      ).toThrow(AgentExchangeError);
+    }
+  });
+
+  test("requires HTTPS requester and recipient authorities", () => {
+    const now = Date.now();
+    expect(() =>
+      validateAgentExchangeInput(
+        requestInput({
+          expiresAt: now + 60_000,
+          requester: {
+            ...requestInput().requester,
+            authority: "https://auth.requester.example/path",
+          },
+        }),
+        {
+          allowInsecureLocalhost: false,
+          allowedProcessingModes: ["tool-confined"],
+          maxTtlMs: 300_000,
+          now,
+        },
+      ),
+    ).toThrow(AgentExchangeError);
+  });
 });
 
 describe("leak canary", () => {

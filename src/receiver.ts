@@ -107,6 +107,7 @@ export const createAgentExchangeReceiver = (
         }
 
         const receipt: AgentExchangeReceipt = Object.freeze({
+          assurance: delivery.request.assurance,
           completedAt: now(),
           consentId: consent.consentId,
           exchangeId: delivery.request.exchangeId,

@@ -98,6 +98,103 @@ describe("model-blind agent exchange", () => {
   });
 });
 
+describe("phishing-resistant approval", () => {
+  test("binds a user-verified WebAuthn assertion to the complete request", async () => {
+    let expectedChallenge = "";
+    const fixture = await exchangeFixture({
+      approvalProvider: {
+        begin: (input) => {
+          expectedChallenge = input.challenge;
+          return {
+            challenge: input.challenge,
+            options: {
+              challenge: input.challenge,
+              userVerification: "required",
+            },
+          };
+        },
+        verify: (input) => {
+          expect(input.challenge).toBe(expectedChallenge);
+          expect(input.response).toEqual({ id: "credential-1" });
+          return {
+            credentialId: "credential-1",
+            rpId: "requester.example",
+            subject: input.subject,
+            userVerified: true,
+            verifierOrigin: input.verifierOrigin,
+          };
+        },
+      },
+    });
+    const requested = await fixture.sender.request(
+      requestInput({
+        assurance: {
+          approval: "webauthn-verifier-bound",
+          credential: "sender-constrained",
+          execution: "purpose-bound",
+        },
+      }),
+    );
+
+    await expect(
+      fixture.sender.issueLease(requested.exchange.exchangeId),
+    ).rejects.toMatchObject({ code: "invalid_request" });
+    const options = await fixture.sender.beginApproval(
+      requested.exchange.exchangeId,
+    );
+    expect(options.challenge).toHaveLength(64);
+    const evidence = await fixture.sender.approve({
+      exchangeId: requested.exchange.exchangeId,
+      response: { id: "credential-1" },
+    });
+    expect(evidence).toMatchObject({
+      requestDigest: options.challenge,
+      userVerified: true,
+      verifierOrigin: "https://auth.requester.example",
+    });
+    const lease = await fixture.sender.issueLease(
+      requested.exchange.exchangeId,
+    );
+    const completed = await fixture.sender.execute({
+      exchangeId: requested.exchange.exchangeId,
+      leaseId: lease.leaseId,
+    });
+    expect(completed.receipt.assurance.approval).toBe(
+      "webauthn-verifier-bound",
+    );
+  });
+
+  test("rejects an assertion for another origin or subject", async () => {
+    const fixture = await exchangeFixture({
+      approvalProvider: {
+        begin: ({ challenge }) => ({ challenge, options: {} }),
+        verify: () => ({
+          credentialId: "credential-1",
+          rpId: "attacker.example",
+          subject: "attacker",
+          userVerified: true,
+          verifierOrigin: "https://attacker.example",
+        }),
+      },
+    });
+    const requested = await fixture.sender.request(
+      requestInput({
+        assurance: {
+          approval: "webauthn-verifier-bound",
+          credential: "origin-bound",
+          execution: "purpose-bound",
+        },
+      }),
+    );
+    await expect(
+      fixture.sender.approve({
+        exchangeId: requested.exchange.exchangeId,
+        response: {},
+      }),
+    ).rejects.toMatchObject({ code: "invalid_request" });
+  });
+});
+
 describe("safe failure boundaries", () => {
   test("redacts a source error containing the protected value", async () => {
     const fixture = await exchangeFixture({

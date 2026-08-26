@@ -47,6 +47,27 @@ const validIdentity = (identity: {
   nonEmpty(identity.authority) &&
   nonEmpty(identity.subject);
 
+export const isAgentExchangeAssurance = (
+  assurance: unknown,
+): assurance is AgentExchangeRequestInput["assurance"] => {
+  if (typeof assurance !== "object" || assurance === null) return false;
+  const value = assurance as Record<string, unknown>;
+  if (value.approval === "webauthn-verifier-bound") {
+    return (
+      (value.credential === "origin-bound" ||
+        value.credential === "sender-constrained") &&
+      value.execution === "purpose-bound"
+    );
+  }
+  return (
+    value.approval === "policy" &&
+    (value.credential === "bearer" ||
+      value.credential === "origin-bound" ||
+      value.credential === "sender-constrained") &&
+    (value.execution === "general" || value.execution === "purpose-bound")
+  );
+};
+
 export const validateAgentExchangeInput = (
   input: AgentExchangeRequestInput,
   options: {
@@ -58,8 +79,11 @@ export const validateAgentExchangeInput = (
 ): void => {
   const processingMode = input.processingMode ?? "tool-confined";
   if (
+    !isAgentExchangeAssurance(input.assurance) ||
     !validIdentity(input.requester) ||
     !validIdentity(input.recipient) ||
+    !validOrigin(input.requester.authority, options.allowInsecureLocalhost) ||
+    !validOrigin(input.recipient.authority, options.allowInsecureLocalhost) ||
     !nonEmpty(input.purpose) ||
     !nonEmpty(input.secretKind) ||
     !nonEmpty(input.resource.accountRef) ||

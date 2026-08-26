@@ -4,6 +4,7 @@ import type { AgentExchangeRequest } from "./types";
 
 export const agentExchangeBinding = (request: AgentExchangeRequest) => ({
   actionId: request.actionId,
+  assurance: request.assurance,
   exchangeId: request.exchangeId,
   expiresAt: request.expiresAt,
   maximumUses: request.maximumUses,
@@ -16,6 +17,12 @@ export const agentExchangeBinding = (request: AgentExchangeRequest) => ({
   risk: request.risk,
   secretKind: request.secretKind,
 });
+
+export const agentExchangeApprovalChallenge = (request: AgentExchangeRequest) =>
+  digest({
+    domain: "org.absolutejs.agent-exchange.webauthn-approval.v1",
+    request: agentExchangeBinding(request),
+  });
 
 export const agentExchangeContext = async (
   request: AgentExchangeRequest,

@@ -1,13 +1,21 @@
-import { digest, type ActionRequestInput } from "@absolutejs/agency";
+import {
+  canonicalJson,
+  digest,
+  type ActionRequestInput,
+} from "@absolutejs/agency";
 import { AgentExchangeError } from "./errors";
 import { assertNoSensitiveValue } from "./leakage";
-import { agentExchangeContext } from "./context";
+import {
+  agentExchangeApprovalChallenge,
+  agentExchangeContext,
+} from "./context";
 import type {
   AgentExchangeReceipt,
   AgentExchangeRequest,
   AgentExchangeRequestInput,
   AgentExchangeSender,
   AgentExchangeSenderOptions,
+  AgentExchangeWebAuthnApprovalEvidence,
 } from "./types";
 import {
   DEFAULT_BLOCKED_RISKS,
@@ -19,6 +27,7 @@ import {
 } from "./validation";
 
 const safeRequestInput = (input: AgentExchangeRequestInput, nonce: string) => ({
+  assurance: input.assurance,
   expiresAt: input.expiresAt,
   maximumUses: 1 as const,
   nonce,
@@ -30,6 +39,43 @@ const safeRequestInput = (input: AgentExchangeRequestInput, nonce: string) => ({
   risk: input.risk,
   secretKind: input.secretKind,
 });
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const validRpIdForOrigin = (rpId: string, origin: string) => {
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    const expected = rpId.toLowerCase();
+    return (
+      expected.length > 0 &&
+      (hostname === expected || hostname.endsWith(`.${expected}`))
+    );
+  } catch {
+    return false;
+  }
+};
+
+const approvalEvidenceFrom = (
+  value: unknown,
+): AgentExchangeWebAuthnApprovalEvidence | undefined => {
+  if (!isRecord(value)) return undefined;
+  const evidence = value.agentExchangeWebAuthn;
+  if (!isRecord(evidence)) return undefined;
+  if (
+    typeof evidence.challenge !== "string" ||
+    typeof evidence.credentialIdHash !== "string" ||
+    typeof evidence.requestDigest !== "string" ||
+    typeof evidence.rpId !== "string" ||
+    typeof evidence.subject !== "string" ||
+    evidence.userVerified !== true ||
+    typeof evidence.verifiedAt !== "number" ||
+    typeof evidence.verifierOrigin !== "string"
+  ) {
+    return undefined;
+  }
+  return evidence as AgentExchangeWebAuthnApprovalEvidence;
+};
 
 const agencyAction = (
   input: AgentExchangeRequestInput,
@@ -81,6 +127,7 @@ const validReceipt = (
   receipt: AgentExchangeReceipt,
   request: AgentExchangeRequest,
 ): boolean =>
+  canonicalJson(receipt.assurance) === canonicalJson(request.assurance) &&
   receipt.exchangeId === request.exchangeId &&
   receipt.maximumUses === 1 &&
   receipt.modelObservedSecret === false &&
@@ -153,11 +200,117 @@ export const createAgentExchangeSender = (
     return Object.freeze({ decision: requested.decision, exchange });
   };
 
+  const requiredWebAuthnEvidence = async (exchange: AgentExchangeRequest) => {
+    if (exchange.assurance.approval !== "webauthn-verifier-bound") return;
+    const approval = (await options.agency.inspect()).approvals.find(
+      (candidate) => candidate.actionId === exchange.actionId,
+    );
+    const evidence = approvalEvidenceFrom(approval?.conditions);
+    const challenge = await agentExchangeApprovalChallenge(exchange);
+    if (
+      evidence === undefined ||
+      evidence.challenge !== challenge ||
+      evidence.requestDigest !== challenge ||
+      evidence.subject !== exchange.requester.subject ||
+      evidence.verifierOrigin !== exchange.requester.authority ||
+      !validRpIdForOrigin(evidence.rpId, evidence.verifierOrigin) ||
+      !Number.isSafeInteger(evidence.verifiedAt) ||
+      evidence.verifiedAt < exchange.createdAt ||
+      evidence.verifiedAt > exchange.expiresAt
+    ) {
+      throw new AgentExchangeError("invalid_request");
+    }
+  };
+
+  const beginApproval: AgentExchangeSender["beginApproval"] = async (
+    exchangeId,
+  ) => {
+    const exchange = await options.store.get(exchangeId);
+    if (
+      exchange === undefined ||
+      exchange.assurance.approval !== "webauthn-verifier-bound" ||
+      options.approvalProvider === undefined
+    ) {
+      throw new AgentExchangeError("invalid_request");
+    }
+    const challenge = await agentExchangeApprovalChallenge(exchange);
+    const begun = await options.approvalProvider.begin({
+      challenge,
+      request: exchange,
+      subject: exchange.requester.subject,
+      verifierOrigin: exchange.requester.authority,
+    });
+    if (begun.challenge !== challenge) {
+      throw new AgentExchangeError("invalid_request");
+    }
+    return Object.freeze({ challenge, options: begun.options });
+  };
+
+  const approve: AgentExchangeSender["approve"] = async ({
+    exchangeId,
+    response,
+  }) => {
+    const exchange = await options.store.get(exchangeId);
+    if (
+      exchange === undefined ||
+      exchange.assurance.approval !== "webauthn-verifier-bound" ||
+      options.approvalProvider === undefined
+    ) {
+      throw new AgentExchangeError("invalid_request");
+    }
+    const challenge = await agentExchangeApprovalChallenge(exchange);
+    let verified;
+    try {
+      verified = await options.approvalProvider.verify({
+        challenge,
+        request: exchange,
+        response,
+        subject: exchange.requester.subject,
+        verifierOrigin: exchange.requester.authority,
+      });
+    } catch {
+      throw new AgentExchangeError("invalid_request");
+    }
+    const verifiedAt = now();
+    if (
+      verified.userVerified !== true ||
+      verified.subject !== exchange.requester.subject ||
+      verified.verifierOrigin !== exchange.requester.authority ||
+      verified.credentialId.trim().length === 0 ||
+      !validRpIdForOrigin(verified.rpId, verified.verifierOrigin) ||
+      verifiedAt < exchange.createdAt ||
+      verifiedAt >= exchange.expiresAt
+    ) {
+      throw new AgentExchangeError("invalid_request");
+    }
+    const evidence: AgentExchangeWebAuthnApprovalEvidence = Object.freeze({
+      challenge,
+      credentialIdHash: await digest({
+        credentialId: verified.credentialId,
+        domain: "org.absolutejs.agent-exchange.webauthn-credential.v1",
+      }),
+      requestDigest: challenge,
+      rpId: verified.rpId,
+      subject: verified.subject,
+      userVerified: true,
+      verifiedAt,
+      verifierOrigin: verified.verifierOrigin,
+    });
+    await options.agency.approve({
+      actionId: exchange.actionId,
+      approvedBy: evidence.subject,
+      approvedUntil: exchange.expiresAt,
+      conditions: { agentExchangeWebAuthn: evidence },
+    });
+    return evidence;
+  };
+
   const issueLease = async (exchangeId: string) => {
     const exchange = await options.store.get(exchangeId);
     if (exchange === undefined) {
       throw new AgentExchangeError("exchange_not_found");
     }
+    await requiredWebAuthnEvidence(exchange);
     return options.agency.issueLease(exchange.actionId);
   };
 
@@ -169,6 +322,7 @@ export const createAgentExchangeSender = (
     if (exchange === undefined) {
       throw new AgentExchangeError("exchange_not_found");
     }
+    await requiredWebAuthnEvidence(exchange);
 
     const executed = await options.agency.execute({
       executor: "agent-exchange:sender",
@@ -254,5 +408,11 @@ export const createAgentExchangeSender = (
     });
   };
 
-  return Object.freeze({ execute, issueLease, request });
+  return Object.freeze({
+    approve,
+    beginApproval,
+    execute,
+    issueLease,
+    request,
+  });
 };

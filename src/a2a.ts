@@ -1,6 +1,7 @@
 import type { A2aAgentCard, A2aMessage } from "@absolutejs/a2a";
 import { AgentExchangeError } from "./errors";
-import type { AgentExchangeRequest } from "./types";
+import type { AgentExchangeAssurance, AgentExchangeRequest } from "./types";
+import { isAgentExchangeAssurance } from "./validation";
 
 export const ABSOLUTE_AGENT_EXCHANGE_EXTENSION =
   "https://github.com/absolutejs/agent-exchange/extensions/a2a/v1" as const;
@@ -9,6 +10,7 @@ export const AGENT_EXCHANGE_REQUEST_MEDIA_TYPE =
 
 export type A2aAgentExchangeReference = {
   readonly actionId: string;
+  readonly assurance: AgentExchangeAssurance;
   readonly exchangeId: string;
   readonly expiresAt: number;
   readonly operation: string;
@@ -44,6 +46,7 @@ export const toA2aAgentExchangeReference = (
 ): A2aAgentExchangeReference =>
   Object.freeze({
     actionId: request.actionId,
+    assurance: request.assurance,
     exchangeId: request.exchangeId,
     expiresAt: request.expiresAt,
     operation: request.resource.operation,
@@ -88,6 +91,7 @@ export const parseA2aAgentExchangeReference = (
   const data = part !== undefined && "data" in part ? part.data : undefined;
   const allowedKeys = new Set([
     "actionId",
+    "assurance",
     "exchangeId",
     "expiresAt",
     "operation",
@@ -101,6 +105,7 @@ export const parseA2aAgentExchangeReference = (
     !isRecord(data) ||
     Object.keys(data).some((key) => !allowedKeys.has(key)) ||
     typeof data.actionId !== "string" ||
+    !isAgentExchangeAssurance(data.assurance) ||
     typeof data.exchangeId !== "string" ||
     typeof data.expiresAt !== "number" ||
     typeof data.operation !== "string" ||
