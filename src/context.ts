@@ -1,6 +1,9 @@
 import { digest } from "@absolutejs/agency";
 import type { AuthenticatedContext } from "@absolutejs/e2ee";
-import type { AgentExchangeRequest } from "./types";
+import type {
+  AgentExchangeRequest,
+  AgentExchangeStandingMandateDraft,
+} from "./types";
 
 export const agentExchangeBinding = (request: AgentExchangeRequest) => ({
   actionId: request.actionId,
@@ -22,6 +25,14 @@ export const agentExchangeApprovalChallenge = (request: AgentExchangeRequest) =>
   digest({
     domain: "org.absolutejs.agent-exchange.webauthn-approval.v1",
     request: agentExchangeBinding(request),
+  });
+
+export const agentExchangeMandateApprovalChallenge = (
+  draft: AgentExchangeStandingMandateDraft,
+) =>
+  digest({
+    domain: "org.absolutejs.agent-exchange.standing-mandate-approval.v1",
+    mandate: draft,
   });
 
 export const agentExchangeContext = async (

@@ -2,6 +2,7 @@ export {
   agentExchangeApprovalChallenge,
   agentExchangeBinding,
   agentExchangeContext,
+  agentExchangeMandateApprovalChallenge,
 } from "./context";
 export {
   AgentExchangeError,

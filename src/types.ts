@@ -92,6 +92,11 @@ export type AgentExchangeStandingMandateInput = Omit<
   "issuedAt" | "version"
 >;
 
+export type AgentExchangeStandingMandateDraft = Omit<
+  AgentExchangeStandingMandateInput,
+  "approval"
+>;
+
 export type SignedAgentExchangeStandingMandate = {
   readonly compactJws: string;
 };

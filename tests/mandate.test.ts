@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   AgentExchangeError,
+  agentExchangeMandateApprovalChallenge,
   createAgentExchangeStandingMandateAuthority,
   createMemoryAgentExchangeMandateStore,
   type AgentExchangeMandateJwsSigner,
@@ -120,6 +121,16 @@ const setup = () => {
 };
 
 describe("standing mandates", () => {
+  test("binds WebAuthn approval to the complete mandate draft", async () => {
+    const { approval: _approval, ...draft } = mandateInput();
+    const original = await agentExchangeMandateApprovalChallenge(draft);
+    const changed = await agentExchangeMandateApprovalChallenge({
+      ...draft,
+      maximumUses: draft.maximumUses + 1,
+    });
+    expect(original).not.toBe(changed);
+  });
+
   test("authorizes exact grants and consumes each exchange once", async () => {
     const { authority } = setup();
     const issued = await authority.issue(mandateInput());
