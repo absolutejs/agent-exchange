@@ -50,6 +50,25 @@ describe("A2A Agent Exchange extension", () => {
     ).toThrow();
   });
 
+  test("rejects references outside an explicitly activated extension context", async () => {
+    const fixture = await exchangeFixture();
+    const requested = await fixture.sender.request(requestInput());
+    const message = toA2aAgentExchangeMessage(requested.exchange);
+
+    expect(() =>
+      parseA2aAgentExchangeReference({ ...message, extensions: [] }),
+    ).toThrow();
+    expect(() =>
+      parseA2aAgentExchangeReference({
+        ...message,
+        contextId: "another-exchange",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseA2aAgentExchangeReference({ ...message, metadata: {} }),
+    ).toThrow();
+  });
+
   test("advertises the extension exactly once", () => {
     const card = withAgentExchangeExtension({
       capabilities: { extensions: [] },

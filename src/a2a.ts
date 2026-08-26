@@ -8,6 +8,10 @@ export const ABSOLUTE_AGENT_EXCHANGE_EXTENSION =
 export const AGENT_EXCHANGE_REQUEST_MEDIA_TYPE =
   "application/vnd.absolutejs.agent-exchange-reference+json" as const;
 
+const MAX_A2A_IDENTIFIER_BYTES = 512;
+const MAX_A2A_PURPOSE_BYTES = 2_048;
+const encoder = new TextEncoder();
+
 export type A2aAgentExchangeReference = {
   readonly actionId: string;
   readonly assurance: AgentExchangeAssurance;
@@ -84,6 +88,29 @@ export const toA2aAgentExchangeMessage = (
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
+const bounded = (value: unknown, maximumBytes: number): value is string =>
+  typeof value === "string" &&
+  value.trim().length > 0 &&
+  encoder.encode(value).byteLength <= maximumBytes;
+
+const secureOrigin = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+  try {
+    const parsed = new URL(value);
+    const local =
+      parsed.protocol === "http:" &&
+      (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1");
+    return (
+      parsed.origin === value &&
+      parsed.username === "" &&
+      parsed.password === "" &&
+      (parsed.protocol === "https:" || local)
+    );
+  } catch {
+    return false;
+  }
+};
+
 export const parseA2aAgentExchangeReference = (
   message: A2aMessage,
 ): A2aAgentExchangeReference => {
@@ -93,6 +120,8 @@ export const parseA2aAgentExchangeReference = (
       candidate.mediaType === AGENT_EXCHANGE_REQUEST_MEDIA_TYPE,
   );
   const data = part !== undefined && "data" in part ? part.data : undefined;
+  const extensionMetadata =
+    message.metadata?.[ABSOLUTE_AGENT_EXCHANGE_EXTENSION];
   const allowedKeys = new Set([
     "actionId",
     "assurance",
@@ -107,19 +136,28 @@ export const parseA2aAgentExchangeReference = (
     "recipientAgentId",
   ]);
   if (
+    message.role !== "ROLE_USER" ||
+    message.extensions?.includes(ABSOLUTE_AGENT_EXCHANGE_EXTENSION) !== true ||
+    !isRecord(extensionMetadata) ||
+    Object.keys(extensionMetadata).some((key) => key !== "exchangeId") ||
     !isRecord(data) ||
     Object.keys(data).some((key) => !allowedKeys.has(key)) ||
-    typeof data.actionId !== "string" ||
+    !bounded(data.actionId, MAX_A2A_IDENTIFIER_BYTES) ||
     !isAgentExchangeAssurance(data.assurance) ||
-    typeof data.exchangeId !== "string" ||
-    typeof data.expiresAt !== "number" ||
-    (data.mandateId !== undefined && typeof data.mandateId !== "string") ||
-    typeof data.operation !== "string" ||
-    typeof data.origin !== "string" ||
+    !bounded(data.exchangeId, MAX_A2A_IDENTIFIER_BYTES) ||
+    extensionMetadata.exchangeId !== data.exchangeId ||
+    message.contextId !== data.exchangeId ||
+    !Number.isSafeInteger(data.expiresAt) ||
+    (data.expiresAt as number) <= 0 ||
+    (data.assurance.approval === "standing-mandate"
+      ? !bounded(data.mandateId, MAX_A2A_IDENTIFIER_BYTES)
+      : data.mandateId !== undefined) ||
+    !bounded(data.operation, MAX_A2A_IDENTIFIER_BYTES) ||
+    !secureOrigin(data.origin) ||
     data.processingMode !== "tool-confined" ||
-    typeof data.provider !== "string" ||
-    typeof data.purpose !== "string" ||
-    typeof data.recipientAgentId !== "string"
+    !bounded(data.provider, MAX_A2A_IDENTIFIER_BYTES) ||
+    !bounded(data.purpose, MAX_A2A_PURPOSE_BYTES) ||
+    !bounded(data.recipientAgentId, MAX_A2A_IDENTIFIER_BYTES)
   ) {
     throw new AgentExchangeError("invalid_request");
   }
