@@ -1,5 +1,19 @@
 {
 	"contract": 1,
 	"name": "@absolutejs/agent-exchange",
-	"releases": []
+	"releases": [
+		{
+			"changes": [
+				{
+					"kind": "fixed",
+					"summary": "Allow a mandate draft to become active before signing so real asynchronous passkey approval preserves the exact reviewed draft; retain fresh approval, expiry, issuer and grant checks.",
+					"symbols": [
+						"createAgentExchangeStandingMandateAuthority"
+					]
+				}
+			],
+			"date": "2026-09-24",
+			"version": "0.5.1"
+		}
+	]
 }
