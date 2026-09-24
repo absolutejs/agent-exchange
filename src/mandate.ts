@@ -181,8 +181,9 @@ const validateMandate = (
     (value.maximumUses as number) < 1 ||
     (value.maximumUses as number) > options.maxUses ||
     (value.issuedAt as number) > options.now ||
-    (value.notBefore as number) < (value.issuedAt as number) ||
+    (value.notBefore as number) < 0 ||
     (value.expiresAt as number) <= (value.notBefore as number) ||
+    (value.expiresAt as number) <= (value.issuedAt as number) ||
     (value.expiresAt as number) >
       (value.issuedAt as number) + options.maxTtlMs ||
     !isRecord(approval) ||

@@ -123,6 +123,45 @@ const setup = () => {
 };
 
 describe("standing mandates", () => {
+  test("issues an unchanged draft after asynchronous user verification", async () => {
+    const { authority, setClock } = setup();
+    const original = mandateInput();
+    const { approval: ignored, ...draft } = original;
+    const before = await agentExchangeMandateApprovalChallenge(draft);
+    setClock(now + 10000);
+    const issued = await authority.issue({
+      ...original,
+      approval: { ...original.approval, verifiedAt: now + 9000 },
+    });
+    await expect(
+      authority.issue({
+        ...original,
+        mandateId: "expired-draft",
+        expiresAt: now + 1000,
+      }),
+    ).rejects.toThrow(AgentExchangeError);
+    expect(issued.mandate.notBefore).toBe(draft.notBefore);
+    expect(issued.mandate.issuedAt).toBe(now + 10000);
+    const { approval, issuedAt, version, ...issuedDraft } = issued.mandate;
+    expect(await agentExchangeMandateApprovalChallenge(issuedDraft)).toBe(
+      before,
+    );
+    await expect(
+      authority.authorize({
+        expectedIssuer: issuer,
+        request: request({ createdAt: now + 10000 }),
+        signedMandate: issued.signedMandate,
+      }),
+    ).resolves.toMatchObject({ status: "authorized" });
+    await expect(
+      authority.issue({
+        ...original,
+        mandateId: "negative-not-before",
+        notBefore: -1,
+      }),
+    ).rejects.toThrow(AgentExchangeError);
+  });
+
   test("binds WebAuthn approval to the complete mandate draft", async () => {
     const { approval: _approval, ...draft } = mandateInput();
     const original = await agentExchangeMandateApprovalChallenge(draft);
